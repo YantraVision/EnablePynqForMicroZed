@@ -1,0 +1,97 @@
+1)Starting point For the App->
+Used following codes as reference.
+https://gist.github.com/jayrambhia/5866483 
+https://www.kernel.org/doc/html/v4.10/media/uapi/v4l/capture.c.html
+
+What we add to this app
+->changed pixel format ,width,height
+->add the config(format setup) for sub device which is media node(adopted from basler libs)
+->added the memory mapping part.
+
+
+2)Starting point for the petalinux setup
+->Build plnx project from bsp 
+->In the dtsi file added video src and video cap part.
+->Added driver for video src(took from basler video src) via cross compilation.
+   So this gave the media and video nodes.
+   With these nodes we are able to change the format.
+
+3)Running app on the board.
+->App was giving an error at the video start stage.
+    By changing the format we are able to cross the video start stage.
+->To check the pattern of the ioctl printed the dmesges on the basler as well as the yv board.
+    For basler we did the cross compilation of the dma driver.
+    For the yv board we did apply patches on the plnx project.
+->Found out that on the boath board ioctl calling is the same.
+   On the basler board and basler grab app and our app are calling the same ioctl. 
+->video start issue was solved by giving the correct index of the buffer.
+->Then we got the working app for the mmap use case.But this was running alternatively.
+I.e.2nd,4th and 6thtime.
+1st,3rd,or 5th time it was giving  vidioc_streamon, getting->[Errno 25] Inappropriate ioctl for device
+->we moved to python  for the v4l2 app.
+   Here we observed that mmap is slower so we tried the userptr use case.
+
+How the stream on issue was resolved.
+This issue got resolved by a small change in the driver code.
+In the vdma driver(xilinx-dma.c) code we changed as following at line number 128
+xvip_subdev_set_streaming(xdev, subdev, 0);so here we did as 
+xvip_subdev_set_streaming(xdev, subdev, 1);
+
+In the v4l2 driver we did change at line number 220.
+1)Starting point For the App->
+Used following codes as reference.
+https://gist.github.com/jayrambhia/5866483 
+https://www.kernel.org/doc/html/v4.10/media/uapi/v4l/capture.c.html
+
+What we add to this app
+->changed pixel format ,width,height
+->add the config(format setup) for sub device which is media node(adopted from basler libs)
+->added the memory mapping part.
+
+
+2)Starting point for the petalinux setup
+->Build plnx project from bsp 
+->In the dtsi file added video src and video cap part.
+->Added driver for video src(took from basler video src) via cross compilation.
+   So this gave the media and video nodes.
+   With these nodes we are able to change the format.
+
+3)Running app on the board.
+->App was giving an error at the video start stage.
+    By changing the format we are able to cross the video start stage.
+->To check the pattern of the ioctl printed the dmesges on the basler as well as the yv board.
+    For basler we did the cross compilation of the dma driver.
+    For the yv board we did apply patches on the plnx project.
+->Found out that on the boath board ioctl calling is the same.
+   On the basler board and basler grab app and our app are calling the same ioctl. 
+->video start issue was solved by giving the correct index of the buffer.
+->Then we got the working app for the mmap use case.But this was running alternatively.
+I.e.2nd,4th and 6thtime.
+1st,3rd,or 5th time it was giving  vidioc_streamon, getting->[Errno 25] Inappropriate ioctl for device
+->we moved to python  for the v4l2 app.
+   Here we observed that mmap is slower so we tried the userptr use case.
+
+How the stream on issue was resolved.
+This issue got resolved by a small change in the driver code.
+In the vdma driver(xilinx-dma.c) code we changed as following at line number 128
+xvip_subdev_set_streaming(xdev, subdev, 0);so here we did as 
+xvip_subdev_set_streaming(xdev, subdev, 1);
+
+In the v4l2 driver we did change at line number 220.
+list_for_each_entry(entity, &xdev->entities, list)
+		if (entity->node == subdev->dev->of_node) {
+			bool status = entity->streaming;
+
+			entity->streaming = enable;
+			return status;
+		}
+Here we made like
+list_for_each_entry(entity, &xdev->entities, list)
+		if (entity->node == subdev->dev->of_node) {
+			bool status;
+			entity->streaming = enable;
+			entity->streaming;
+			return status;
+		}
+
+created patch and included in the petalinux project.

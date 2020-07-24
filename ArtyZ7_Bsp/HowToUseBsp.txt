@@ -1,0 +1,17 @@
+Generate the template project.
+To use bsp you can give two commands.
+1)petalinux-create -t project -s pathToBsp file
+i.e.petalinux-create -t project -s frameGrabber_ArtyZ7_plnx_18.3_Rel_24062020.bsp
+OR
+2)-unzip the bsp file tar -xzvf frameGrabber_ArtyZ7_plnx_18.3_Rel_24062020.bsp
+  -cd petalinux_project
+
+Now hardware config.
+petalinux-config --get-hw-description=pathToHdfFile
+
+Now to build the kernel
+petalinux-build -c kernel
+petalinux-build -x package
+
+To create BOOT.BIN use the following commands.
+petalinux-package --boot --fpga PathToBitFile --fsbl images/linux/zynq_fsbl.elf --u-boot images/linux/u-boot.elf --kernel --force

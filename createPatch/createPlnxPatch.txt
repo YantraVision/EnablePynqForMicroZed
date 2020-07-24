@@ -1,0 +1,19 @@
+clone repo :https://github.com/Xilinx/linux-xlnx/tree/master
+git branch plnx version
+i.e.git branch xilinx_rebase_v4.14
+
+now change in the code as you want.
+than git diff > yourchanges.patch
+
+Now include this patch in the plnx project.
+You can follow the the example of linux directory.
+
+-in the plnx project go to project-spec/meta-user/ than recipe-kernel(if recipe-kernel note there then create)
+-now same as linux directory add path in the :linux-xlnx_%.bbappend 
+-create a module directory
+ now create a directory i.e.kernel-module-v4l2 and create a bbapend file as as the name of dirctory kernel-module-v4l2_%.bbappend.
+ add you pacth file in the kernel-module-v4l2 repo and kernel-module-v4l2_%.bbappend.
+
+Now build the kernel:
+petalinux-build -c kernel and your patch will apply in the new image file. 
+

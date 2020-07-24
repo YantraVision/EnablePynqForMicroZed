@@ -1,0 +1,728 @@
+diff --git a/drivers/dma/xilinx/xilinx_dma.c b/drivers/dma/xilinx/xilinx_dma.c
+index 3eaca48..cf6330c 100644
+--- a/drivers/dma/xilinx/xilinx_dma.c
++++ b/drivers/dma/xilinx/xilinx_dma.c
+@@ -765,7 +765,7 @@ static void xilinx_dma_free_chan_resources(struct dma_chan *dchan)
+ 	unsigned long flags;
+ 
+ 	dev_dbg(chan->dev, "Free all channel resources.\n");
+-
++	
+ 	xilinx_dma_free_descriptors(chan);
+ 
+ 	if (chan->xdev->dma_config->dmatype == XDMA_TYPE_AXIDMA) {
+@@ -787,6 +787,7 @@ static void xilinx_dma_free_chan_resources(struct dma_chan *dchan)
+ 		dma_pool_destroy(chan->desc_pool);
+ 		chan->desc_pool = NULL;
+ 	}
++        printk("freed all the resources\n");
+ }
+ 
+ /**
+@@ -957,7 +958,8 @@ static int xilinx_dma_alloc_chan_resources(struct dma_chan *dchan)
+ 	if ((chan->xdev->dma_config->dmatype == XDMA_TYPE_CDMA) && chan->has_sg)
+ 		dma_ctrl_set(chan, XILINX_DMA_REG_DMACR,
+ 			     XILINX_CDMA_CR_SGMODE);
+-
++        
++	printk("channel resource are allocated\n");
+ 	return 0;
+ }
+ 
+@@ -1017,7 +1019,7 @@ static int xilinx_dma_stop_transfer(struct xilinx_dma_chan *chan)
+ 	u32 val;
+ 
+ 	dma_ctrl_clr(chan, XILINX_DMA_REG_DMACR, XILINX_DMA_DMACR_RUNSTOP);
+-
++        printk("channel is halted id = %d \n",chan->id);
+ 	/* Wait for the hardware to halt */
+ 	return xilinx_dma_poll_timeout(chan, XILINX_DMA_REG_DMASR, val,
+ 				       val & XILINX_DMA_DMASR_HALTED, 0,
+@@ -1055,7 +1057,9 @@ static void xilinx_dma_start(struct xilinx_dma_chan *chan)
+ 				      !(val & XILINX_DMA_DMASR_HALTED), 0,
+ 				      XILINX_DMA_LOOP_COUNT);
+ 
++	printk("dma started chan = %d \n",chan->id);
+ 	if (err) {
++		printk("can not start chan %d\n",chan->id);
+ 		dev_err(chan->dev, "Cannot start channel %p: %x\n",
+ 			chan, dma_ctrl_read(chan, XILINX_DMA_REG_DMASR));
+ 
+@@ -1152,6 +1156,7 @@ static void xilinx_vdma_start_transfer(struct xilinx_dma_chan *chan)
+ 		list_splice_tail_init(&chan->pending_list, &chan->active_list);
+ 		chan->desc_pendingcount = 0;
+ 	} else {
++		printk("hardware started\n");
+ 		struct xilinx_vdma_tx_segment *segment, *last = NULL;
+ 		int i = 0;
+ 
+@@ -1188,7 +1193,7 @@ static void xilinx_vdma_start_transfer(struct xilinx_dma_chan *chan)
+ 		if (chan->desc_submitcount == chan->num_frms)
+ 			chan->desc_submitcount = 0;
+ 	}
+-
++	printk("transfer started chan id = %d\n",chan->id);
+ 	chan->idle = false;
+ }
+ 
+@@ -1361,7 +1366,7 @@ static void xilinx_dma_start_transfer(struct xilinx_dma_chan *chan)
+ 		dma_ctrl_write(chan, XILINX_DMA_REG_BTT,
+ 			       hw->control & chan->xdev->max_buffer_len);
+ 	}
+-
++	printk("DMA transfer started\n");
+ 	list_splice_tail_init(&chan->pending_list, &chan->active_list);
+ 	chan->desc_pendingcount = 0;
+ 	chan->idle = false;
+@@ -1420,7 +1425,7 @@ static int xilinx_dma_reset(struct xilinx_dma_chan *chan)
+ 	err = xilinx_dma_poll_timeout(chan, XILINX_DMA_REG_DMACR, tmp,
+ 				      !(tmp & XILINX_DMA_DMACR_RESET), 0,
+ 				      XILINX_DMA_LOOP_COUNT);
+-
++	printk("Reset DMA CHANNEL\n",chan->id);
+ 	if (err) {
+ 		dev_err(chan->dev, "reset timeout, cr %x, sr %x\n",
+ 			dma_ctrl_read(chan, XILINX_DMA_REG_DMACR),
+@@ -2183,7 +2188,7 @@ static int xilinx_dma_terminate_all(struct dma_chan *dchan)
+ 	/* Remove and free all of the descriptors in the lists */
+ 	xilinx_dma_free_descriptors(chan);
+ 	chan->idle = true;
+-
++	printk("halt channel and freed the channel\n");
+ 	if (chan->cyclic) {
+ 		reg = dma_ctrl_read(chan, XILINX_DMA_REG_DMACR);
+ 		reg &= ~XILINX_DMA_CR_CYCLIC_BD_EN_MASK;
+@@ -2260,7 +2265,7 @@ int xilinx_vdma_channel_set_config(struct dma_chan *dchan,
+ 	dmacr |= cfg->ext_fsync << XILINX_DMA_DMACR_FSYNCSRC_SHIFT;
+ 
+ 	dma_ctrl_write(chan, XILINX_DMA_REG_DMACR, dmacr);
+-
++	printk("channel configuratuon done %d = \n",chan->id);
+ 	return 0;
+ }
+ EXPORT_SYMBOL(xilinx_vdma_channel_set_config);
+@@ -2623,7 +2628,7 @@ static int xilinx_dma_chan_probe(struct xilinx_dma_device *xdev,
+ 		dev_err(xdev->dev, "Reset channel failed\n");
+ 		return err;
+ 	}
+-
++	printk("channel init done\n");
+ 	return 0;
+ }
+ 
+diff --git a/drivers/media/platform/xilinx/xilinx-dma.c b/drivers/media/platform/xilinx/xilinx-dma.c
+index 79e5806..a9cb3f3 100644
+--- a/drivers/media/platform/xilinx/xilinx-dma.c
++++ b/drivers/media/platform/xilinx/xilinx-dma.c
+@@ -40,6 +40,14 @@
+ #define XVIP_DMA_MIN_HEIGHT		1U
+ #define XVIP_DMA_MAX_HEIGHT		8191U
+ 
++//#define DEBUG false
++
++#ifdef DEBUG
++	#define DEBUG_INFO(...) do{printk(__VA_ARGS__);}while(false)
++#else
++	#define DEBUG_INFO(...) 
++#endif
++
+ struct xventity_list {
+ 	struct list_head list;
+ 	struct media_entity *entity;
+@@ -55,6 +63,10 @@ xvip_dma_remote_subdev(struct media_pad *local, u32 *pad)
+ 	struct media_pad *remote;
+ 
+ 	remote = media_entity_remote_pad(local);
++	if(remote == NULL)
++		DEBUG_INFO("remote pad is NULL");
++	if(!is_media_entity_v4l2_subdev(remote->entity))
++		DEBUG_INFO("v4l2_subdev is not and entity\n");
+ 	if (!remote || !is_media_entity_v4l2_subdev(remote->entity))
+ 		return NULL;
+ 
+@@ -66,6 +78,7 @@ xvip_dma_remote_subdev(struct media_pad *local, u32 *pad)
+ 
+ static int xvip_dma_verify_format(struct xvip_dma *dma)
+ {
++	DEBUG_INFO("In DMA core code verify format API\n");
+ 	struct v4l2_subdev_format fmt;
+ 	struct v4l2_subdev *subdev;
+ 	int ret;
+@@ -94,6 +107,7 @@ static int xvip_dma_verify_format(struct xvip_dma *dma)
+ 	if (width != fmt.format.width || height != fmt.format.height)
+ 		return -EINVAL;
+ 
++	DEBUG_INFO("In DMA core code verfy format API DONE\n");
+ 	return 0;
+ }
+ 
+@@ -103,56 +117,65 @@ static int xvip_dma_verify_format(struct xvip_dma *dma)
+ 
+ static int xvip_entity_start_stop(struct xvip_composite_device *xdev,
+ 				  struct media_entity *entity, bool start)
+-{
++{	
++	DEBUG_INFO("In the XVIP START STOP\n");
++	DEBUG_INFO("what is the START = %d\n",start);
+ 	struct v4l2_subdev *subdev;
+ 	bool is_streaming;
+ 	int ret = 0;
+-
+ 	dev_dbg(xdev->dev, "%s entity %s\n",
+ 		start ? "Starting" : "Stopping", entity->name);
+ 	subdev = media_entity_to_v4l2_subdev(entity);
+-
+ 	/* This is to maintain list of stream on/off devices */
+ 	is_streaming = xvip_subdev_set_streaming(xdev, subdev, start);
+-
++	DEBUG_INFO("is streaming = %d\n",is_streaming);
+ 	/*
+ 	 * start or stop the subdev only once in case if they are
+ 	 * shared between sub-graphs
+ 	 */
+ 	if (start && !is_streaming) {
++		DEBUG_INFO("in the if condition\n");
+ 		/* power-on subdevice */
+ 		ret = v4l2_subdev_call(subdev, core, s_power, 1);
++		DEBUG_INFO("power on = %d\n",ret);
+ 		if (ret < 0 && ret != -ENOIOCTLCMD) {
+ 			dev_err(xdev->dev,
+ 				"s_power on failed on subdev\n");
+-			xvip_subdev_set_streaming(xdev, subdev, 0);
++			xvip_subdev_set_streaming(xdev, subdev, 1);
++			//xvip_subdev_set_streaming(xdev, subdev, 0);
+ 			return ret;
+ 		}
+ 
+ 		/* stream-on subdevice */
+ 		ret = v4l2_subdev_call(subdev, video, s_stream, 1);
++		DEBUG_INFO("stream on = %d\n",ret);
+ 		if (ret < 0 && ret != -ENOIOCTLCMD) {
+ 			dev_err(xdev->dev,
+ 				"s_stream on failed on subdev\n");
+ 			v4l2_subdev_call(subdev, core, s_power, 0);
+-			xvip_subdev_set_streaming(xdev, subdev, 0);
++			xvip_subdev_set_streaming(xdev, subdev, 1);
++			//xvip_subdev_set_streaming(xdev, subdev, 0);
+ 		}
++		DEBUG_INFO("in the if condition Done\n");
+ 	} else if (!start && is_streaming) {
++		DEBUG_INFO("in the else-if condition\n");
+ 		/* stream-off subdevice */
+ 		ret = v4l2_subdev_call(subdev, video, s_stream, 0);
++		DEBUG_INFO("stream of = %d\n",ret);
+ 		if (ret < 0 && ret != -ENOIOCTLCMD) {
+ 			dev_err(xdev->dev,
+ 				"s_stream off failed on subdev\n");
+ 			xvip_subdev_set_streaming(xdev, subdev, 1);
+ 		}
+-
+ 		/* power-off subdevice */
+ 		ret = v4l2_subdev_call(subdev, core, s_power, 0);
++		DEBUG_INFO("power of = %d\n",ret);
+ 		if (ret < 0 && ret != -ENOIOCTLCMD)
+ 			dev_err(xdev->dev,
+ 				"s_power off failed on subdev\n");
++		DEBUG_INFO("in the else=if condition done\n");
+ 	}
+-
++	DEBUG_INFO("In the XVIP START STOP DONE and ret is = %d\n",ret);
+ 	return ret;
+ }
+ 
+@@ -170,6 +193,7 @@ static int xvip_entity_start_stop(struct xvip_composite_device *xdev,
+ static int xvip_pipeline_start_stop(struct xvip_composite_device *xdev,
+ 				    struct xvip_dma *dma, bool start)
+ {
++	DEBUG_INFO("in DMA core code PIPILINE START STOP API\n");
+ 	struct media_graph graph;
+ 	struct media_entity *entity = &dma->video.entity;
+ 	struct media_device *mdev = entity->graph_obj.mdev;
+@@ -225,8 +249,8 @@ static int xvip_pipeline_start_stop(struct xvip_composite_device *xdev,
+ 		list_del(&temp->list);
+ 		kfree(temp);
+ 	}
+-
+-error:
++	DEBUG_INFO("in DMA core code PIPILINE START STOP API DONE\n");
++	error:
+ 	mutex_unlock(&mdev->graph_mutex);
+ 	media_graph_walk_cleanup(&graph);
+ 	return ret;
+@@ -247,7 +271,7 @@ static int xvip_pipeline_start_stop(struct xvip_composite_device *xdev,
+  *
+  * When called with the @on argument set to true, this function will increment
+  * the pipeline streaming count. If the streaming count reaches the number of
+- * DMA engines in the pipeline it will enable all entities that belong to the
++ n* DMA engines in the pipeline it will enable all entities that belong to the
+  * pipeline.
+  *
+  * Similarly, when called with the @on argument set to false, this function will
+@@ -268,12 +292,14 @@ static int xvip_pipeline_set_stream(struct xvip_pipeline *pipe, bool on)
+ 	xdev = pipe->xdev;
+ 
+ 	if (on) {
++		DEBUG_INFO("in the xvip_pipeline_set_stream and the on is = %d\n",on);
+ 		if (pipe->stream_count == pipe->num_dmas - 1) {
+ 			/*
+ 			 * This will iterate the DMAs and the stream-on of
+ 			 * subdevs may not be sequential due to multiple
+ 			 * sub-graph path
+ 			 */
++			DEBUG_INFO("in the start case pipe->stream_count = %d,pipe->num_dmas = %d\n",pipe->stream_count,pipe->num_dmas);
+ 			list_for_each_entry(dma, &xdev->dmas, list) {
+ 				ret = xvip_pipeline_start_stop(xdev, dma, true);
+ 				if (ret < 0)
+@@ -281,11 +307,14 @@ static int xvip_pipeline_set_stream(struct xvip_pipeline *pipe, bool on)
+ 			}
+ 		}
+ 		pipe->stream_count++;
+-	} else {
++		DEBUG_INFO("IN DMA core code stream pipeline started\n");
++		} else {
++		DEBUG_INFO("in the stop case pipe->stream_count = %d,pipe->num_dmas = %d\n",pipe->stream_count,pipe->num_dmas);
+ 		if (--pipe->stream_count == 0)
+ 			list_for_each_entry(dma, &xdev->dmas, list)
+ 				xvip_pipeline_start_stop(xdev, dma, false);
+-	}
++		DEBUG_INFO("IN DMA core code stream pipeline stoped\n");
++		}
+ 
+ done:
+ 	mutex_unlock(&pipe->lock);
+@@ -295,6 +324,7 @@ static int xvip_pipeline_set_stream(struct xvip_pipeline *pipe, bool on)
+ static int xvip_pipeline_validate(struct xvip_pipeline *pipe,
+ 				  struct xvip_dma *start)
+ {
++	DEBUG_INFO("in DMA core code PIPILINE validate API\n");
+ 	struct media_graph graph;
+ 	struct media_entity *entity = &start->video.entity;
+ 	struct media_device *mdev = entity->graph_obj.mdev;
+@@ -338,6 +368,7 @@ static int xvip_pipeline_validate(struct xvip_pipeline *pipe,
+ 	pipe->num_dmas = num_inputs + num_outputs;
+ 	pipe->xdev = start->xdev;
+ 
++	DEBUG_INFO("in DMA core code PIPILINE validate API DONE\n");
+ 	return 0;
+ }
+ 
+@@ -354,6 +385,7 @@ static void __xvip_pipeline_cleanup(struct xvip_pipeline *pipe)
+  */
+ static void xvip_pipeline_cleanup(struct xvip_pipeline *pipe)
+ {
++	DEBUG_INFO("in DMA core code PIPILINE clean API\n");
+ 	mutex_lock(&pipe->lock);
+ 
+ 	/* If we're the last user clean up the pipeline. */
+@@ -361,6 +393,7 @@ static void xvip_pipeline_cleanup(struct xvip_pipeline *pipe)
+ 		__xvip_pipeline_cleanup(pipe);
+ 
+ 	mutex_unlock(&pipe->lock);
++	DEBUG_INFO("in DMA core code PIPILINE clean API DONE\n");
+ }
+ 
+ /**
+@@ -376,6 +409,7 @@ static void xvip_pipeline_cleanup(struct xvip_pipeline *pipe)
+ static int xvip_pipeline_prepare(struct xvip_pipeline *pipe,
+ 				 struct xvip_dma *dma)
+ {
++	DEBUG_INFO("in DMA core code PIPILINE preapare API \n");
+ 	int ret;
+ 
+ 	mutex_lock(&pipe->lock);
+@@ -391,6 +425,7 @@ static int xvip_pipeline_prepare(struct xvip_pipeline *pipe,
+ 
+ 	pipe->use_count++;
+ 	ret = 0;
++	DEBUG_INFO("in DMA core code PIPILINE preapare API DONE\n");
+ 
+ done:
+ 	mutex_unlock(&pipe->lock);
+@@ -473,6 +508,7 @@ xvip_dma_queue_setup(struct vb2_queue *vq,
+ 		     unsigned int sizes[], struct device *alloc_devs[])
+ {
+ 	struct xvip_dma *dma = vb2_get_drv_priv(vq);
++	DEBUG_INFO("in DMA core code in DMA QUEUE setup API\n");
+ 	u8 i;
+ 	int sizeimage;
+ 
+@@ -506,23 +542,27 @@ xvip_dma_queue_setup(struct vb2_queue *vq,
+ 
+ 	*nplanes = 1;
+ 	sizes[0] = sizeimage;
++	DEBUG_INFO("in DMA core code in DMA QUEUE setup API DONE\n");
+ 
+ 	return 0;
+ }
+ 
+ static int xvip_dma_buffer_prepare(struct vb2_buffer *vb)
+ {
++	DEBUG_INFO("in DMA core code in DMA BUFFER prepare API\n");
+ 	struct vb2_v4l2_buffer *vbuf = to_vb2_v4l2_buffer(vb);
+ 	struct xvip_dma *dma = vb2_get_drv_priv(vb->vb2_queue);
+ 	struct xvip_dma_buffer *buf = to_xvip_dma_buffer(vbuf);
+ 
+ 	buf->dma = dma;
++	DEBUG_INFO("in DMA core code in DMA BUFFER prepare API DONE\n");
+ 
+ 	return 0;
+ }
+ 
+ static void xvip_dma_buffer_queue(struct vb2_buffer *vb)
+ {
++	DEBUG_INFO("in DMA core code in DMA BUFFER queue API\n");
+ 	struct vb2_v4l2_buffer *vbuf = to_vb2_v4l2_buffer(vb);
+ 	struct xvip_dma *dma = vb2_get_drv_priv(vb->vb2_queue);
+ 	struct xvip_dma_buffer *buf = to_xvip_dma_buffer(vbuf);
+@@ -609,7 +649,9 @@ static void xvip_dma_buffer_queue(struct vb2_buffer *vb)
+ 		dma->xt.numf = pix->height;
+ 		dma->sgl[0].dst_icg = 0;
+ 	}
+-
++	DEBUG_INFO("min buf are %d\n",vb->vb2_queue->min_buffers_needed);
++	vb->vb2_queue->min_buffers_needed = 1 ;	
++	DEBUG_INFO("after min buf are %d\n",vb->vb2_queue->min_buffers_needed);
+ 	desc = dmaengine_prep_interleaved_dma(dma->dma, &dma->xt, flags);
+ 	if (!desc) {
+ 		dev_err(dma->xdev->dev, "Failed to prepare DMA transfer\n");
+@@ -637,10 +679,14 @@ static void xvip_dma_buffer_queue(struct vb2_buffer *vb)
+ 
+ 	if (vb2_is_streaming(&dma->queue))
+ 		dma_async_issue_pending(dma->dma);
++
++	DEBUG_INFO("in DMA core code in DMA BUFFER queue API DONE\n");
+ }
+ 
+ static int xvip_dma_start_streaming(struct vb2_queue *vq, unsigned int count)
+ {
++	DEBUG_INFO("in DMA core code in DMA START STREAMING API\n");
++	DEBUG_INFO("in start streaming after min buf are %d\n",vq->min_buffers_needed);
+ 	struct xvip_dma *dma = vb2_get_drv_priv(vq);
+ 	struct xvip_dma_buffer *buf, *nbuf;
+ 	struct xvip_pipeline *pipe;
+@@ -685,7 +731,8 @@ static int xvip_dma_start_streaming(struct vb2_queue *vq, unsigned int count)
+ 	ret = xvip_pipeline_set_stream(pipe, true);
+ 	if (ret < 0)
+ 		goto error_stop;
+-
++	
++	DEBUG_INFO("in DMA core code in DMA START STREAMING API DONE\n");
+ 	return 0;
+ 
+ error_stop:
+@@ -706,6 +753,7 @@ static int xvip_dma_start_streaming(struct vb2_queue *vq, unsigned int count)
+ 
+ static void xvip_dma_stop_streaming(struct vb2_queue *vq)
+ {
++	DEBUG_INFO("in DMA core code in DMA STOP API\n");
+ 	struct xvip_dma *dma = vb2_get_drv_priv(vq);
+ 	struct xvip_pipeline *pipe = to_xvip_pipeline(&dma->video.entity);
+ 	struct xvip_dma_buffer *buf, *nbuf;
+@@ -726,6 +774,7 @@ static void xvip_dma_stop_streaming(struct vb2_queue *vq)
+ 		vb2_buffer_done(&buf->buf.vb2_buf, VB2_BUF_STATE_ERROR);
+ 		list_del(&buf->queue);
+ 	}
++	DEBUG_INFO("in DMA core code STOP streaming DONE\n");
+ 	spin_unlock_irq(&dma->queued_lock);
+ }
+ 
+@@ -887,6 +936,7 @@ xvip_dma_enum_format(struct file *file, void *fh, struct v4l2_fmtdesc *f)
+ static int
+ xvip_dma_get_format(struct file *file, void *fh, struct v4l2_format *format)
+ {
++	DEBUG_INFO("in DMA core code DMA get format API \n");
+ 	struct v4l2_fh *vfh = file->private_data;
+ 	struct xvip_dma *dma = to_xvip_dma(vfh->vdev);
+ 
+@@ -894,6 +944,7 @@ xvip_dma_get_format(struct file *file, void *fh, struct v4l2_format *format)
+ 		format->fmt.pix_mp = dma->format.fmt.pix_mp;
+ 	else
+ 		format->fmt.pix = dma->format.fmt.pix;
++	DEBUG_INFO("in DMA core code DMA get format API DONE\n");
+ 
+ 	return 0;
+ }
+@@ -1067,6 +1118,7 @@ xvip_dma_try_format(struct file *file, void *fh, struct v4l2_format *format)
+ static int
+ xvip_dma_set_format(struct file *file, void *fh, struct v4l2_format *format)
+ {
++	DEBUG_INFO("IN DMA core code DMA format set API\n");
+ 	struct v4l2_fh *vfh = file->private_data;
+ 	struct xvip_dma *dma = to_xvip_dma(vfh->vdev);
+ 	const struct xvip_video_format *info;
+@@ -1082,6 +1134,7 @@ xvip_dma_set_format(struct file *file, void *fh, struct v4l2_format *format)
+ 		dma->format.fmt.pix = format->fmt.pix;
+ 
+ 	dma->fmtinfo = info;
++	DEBUG_INFO("IN DMA core code DMA format set API DONE\n");
+ 
+ 	return 0;
+ }
+@@ -1134,6 +1187,7 @@ static const struct v4l2_file_operations xvip_dma_fops = {
+ int xvip_dma_init(struct xvip_composite_device *xdev, struct xvip_dma *dma,
+ 		  enum v4l2_buf_type type, unsigned int port)
+ {
++	DEBUG_INFO("in DMA core code DMA init\n");
+ 	char name[16];
+ 	int ret;
+ 	u32 i, hsub, vsub, width, height;
+@@ -1267,7 +1321,7 @@ int xvip_dma_init(struct xvip_composite_device *xdev, struct xvip_dma *dma,
+ 		dev_err(dma->xdev->dev, "failed to register video device\n");
+ 		goto error;
+ 	}
+-
++	DEBUG_INFO("DMA init Done video device registered\n");
+ 	return 0;
+ 
+ error:
+@@ -1277,6 +1331,7 @@ int xvip_dma_init(struct xvip_composite_device *xdev, struct xvip_dma *dma,
+ 
+ void xvip_dma_cleanup(struct xvip_dma *dma)
+ {
++	DEBUG_INFO("in DMA core code DMA cleanup\n");
+ 	if (video_is_registered(&dma->video))
+ 		video_unregister_device(&dma->video);
+ 
+@@ -1287,4 +1342,5 @@ void xvip_dma_cleanup(struct xvip_dma *dma)
+ 
+ 	mutex_destroy(&dma->lock);
+ 	mutex_destroy(&dma->pipe.lock);
++	DEBUG_INFO("in DMA core code DMA cleanup DONE\n");
+ }
+diff --git a/drivers/media/platform/xilinx/xilinx-vipp.c b/drivers/media/platform/xilinx/xilinx-vipp.c
+index 5509040..62704f6 100644
+--- a/drivers/media/platform/xilinx/xilinx-vipp.c
++++ b/drivers/media/platform/xilinx/xilinx-vipp.c
+@@ -34,7 +34,8 @@
+  * This is for backward compatibility for existing applications,
+  * and planned to be deprecated
+  */
+-static bool xvip_is_mplane = true;
++//static bool xvip_is_mplane = true;
++static bool xvip_is_mplane = false;
+ MODULE_PARM_DESC(is_mplane,
+ 		 "v4l2 device capability to handle multi planar formats");
+ module_param_named(is_mplane, xvip_is_mplane, bool, 0444);
+@@ -217,9 +218,13 @@ bool xvip_subdev_set_streaming(struct xvip_composite_device *xdev,
+ 
+ 	list_for_each_entry(entity, &xdev->entities, list)
+ 		if (entity->node == subdev->dev->of_node) {
+-			bool status = entity->streaming;
+-
++			//bool status = entity->streaming;
++			bool status;
++			printk("what is the value of the enable = %d\n",enable);
++			printk("streaming status = %d\n",status);
+ 			entity->streaming = enable;
++			status = entity->streaming;
++			//return true;
+ 			return status;
+ 		}
+ 
+diff --git a/drivers/media/v4l2-core/videobuf2-core.c b/drivers/media/v4l2-core/videobuf2-core.c
+index cb115ba..494f3d9 100644
+--- a/drivers/media/v4l2-core/videobuf2-core.c
++++ b/drivers/media/v4l2-core/videobuf2-core.c
+@@ -653,6 +653,7 @@ EXPORT_SYMBOL(vb2_verify_memory_type);
+ int vb2_core_reqbufs(struct vb2_queue *q, enum vb2_memory memory,
+ 		unsigned int *count)
+ {
++	printk("In the vb2_core_reqbufs\n");
+ 	unsigned int num_buffers, allocated_buffers, num_planes = 0;
+ 	unsigned plane_sizes[VB2_MAX_PLANES] = { };
+ 	int ret;
+@@ -770,7 +771,7 @@ int vb2_core_reqbufs(struct vb2_queue *q, enum vb2_memory memory,
+ 	 */
+ 	*count = allocated_buffers;
+ 	q->waiting_for_buffers = !q->is_output;
+-
++	printk("In the vb2_core_reqbufs is done\n");
+ 	return 0;
+ }
+ EXPORT_SYMBOL_GPL(vb2_core_reqbufs);
+@@ -1363,11 +1364,11 @@ static int vb2_start_streaming(struct vb2_queue *q)
+ 
+ int vb2_core_qbuf(struct vb2_queue *q, unsigned int index, void *pb)
+ {
++	printk("In the vb2_core_qbuf API\n");
+ 	struct vb2_buffer *vb;
+ 	int ret;
+ 
+ 	vb = q->bufs[index];
+-
+ 	switch (vb->state) {
+ 	case VB2_BUF_STATE_DEQUEUED:
+ 		ret = __buf_prepare(vb, pb);
+@@ -1423,6 +1424,7 @@ int vb2_core_qbuf(struct vb2_queue *q, unsigned int index, void *pb)
+ 	}
+ 
+ 	dprintk(2, "qbuf of buffer %d succeeded\n", vb->index);
++	printk("vb2_core_qbuf api is done\n");
+ 	return 0;
+ }
+ EXPORT_SYMBOL_GPL(vb2_core_qbuf);
+@@ -1633,6 +1635,7 @@ EXPORT_SYMBOL_GPL(vb2_core_dqbuf);
+  */
+ static void __vb2_queue_cancel(struct vb2_queue *q)
+ {
++	printk("In the __vb2_queue_cancel  and Now streaming will be cancel or stop\n");
+ 	unsigned int i;
+ 
+ 	/*
+@@ -1691,22 +1694,25 @@ static void __vb2_queue_cancel(struct vb2_queue *q)
+ 		}
+ 		__vb2_dqbuf(vb);
+ 	}
++	printk("In the __vb2_queue_cancel  and Now streaming will be cancel or stop is done\n");
+ }
+ 
+ int vb2_core_streamon(struct vb2_queue *q, unsigned int type)
+ {
+ 	int ret;
+-
++	printk("In the vb2_core_streamon type = %d\n",type);
+ 	if (type != q->type) {
+ 		dprintk(1, "invalid stream type\n");
+ 		return -EINVAL;
+ 	}
+-
++	
++	printk("q->streaming = %d\n",q->streaming);
+ 	if (q->streaming) {
+ 		dprintk(3, "already streaming\n");
+ 		return 0;
+ 	}
+-
++	printk("q->num_buffers = %d\n",q->num_buffers);
++	printk("q->min_buffers_needed = %d\n",q->min_buffers_needed);
+ 	if (!q->num_buffers) {
+ 		dprintk(1, "no buffers have been allocated\n");
+ 		return -EINVAL;
+@@ -1722,11 +1728,14 @@ int vb2_core_streamon(struct vb2_queue *q, unsigned int type)
+ 	 * Tell driver to start streaming provided sufficient buffers
+ 	 * are available.
+ 	 */
++	printk("q->queued_count = %d\n",q->queued_count);
+ 	if (q->queued_count >= q->min_buffers_needed) {
+ 		ret = v4l_vb2q_enable_media_source(q);
++		printk("output of the v4l_vb2q_enable_media_source = %d\n",ret);
+ 		if (ret)
+ 			return ret;
+ 		ret = vb2_start_streaming(q);
++		printk("output of the vb2_start_streaming = %d\n",ret);	
+ 		if (ret) {
+ 			__vb2_queue_cancel(q);
+ 			return ret;
+@@ -1734,7 +1743,7 @@ int vb2_core_streamon(struct vb2_queue *q, unsigned int type)
+ 	}
+ 
+ 	q->streaming = 1;
+-
++	printk("In vb2_core_streamon Api is done\n");
+ 	dprintk(3, "successful\n");
+ 	return 0;
+ }
+diff --git a/drivers/media/v4l2-core/videobuf2-v4l2.c b/drivers/media/v4l2-core/videobuf2-v4l2.c
+index 0c06699..d6b6740 100644
+--- a/drivers/media/v4l2-core/videobuf2-v4l2.c
++++ b/drivers/media/v4l2-core/videobuf2-v4l2.c
+@@ -483,6 +483,7 @@ EXPORT_SYMBOL(vb2_querybuf);
+ 
+ int vb2_reqbufs(struct vb2_queue *q, struct v4l2_requestbuffers *req)
+ {
++	printk("In the vb2_reqbuf\n");
+ 	int ret = vb2_verify_memory_type(q, req->memory, req->type);
+ 
+ 	return ret ? ret : vb2_core_reqbufs(q, req->memory, &req->count);
+@@ -563,20 +564,24 @@ int vb2_qbuf(struct vb2_queue *q, struct v4l2_buffer *b)
+ 	int ret;
+ 
+ 	if (vb2_fileio_is_active(q)) {
++		printk("In the vb2_qbuf file io is active\n");
+ 		dprintk(1, "file io in progress\n");
+ 		return -EBUSY;
+ 	}
+-
++	printk("In the vb2_qbuf\n");
+ 	ret = vb2_queue_or_prepare_buf(q, b, "qbuf");
++	printk("ret valuue of the vb2_queue_or_prepare_buf = %d\n",ret);
+ 	return ret ? ret : vb2_core_qbuf(q, b->index, b);
+ }
+ EXPORT_SYMBOL_GPL(vb2_qbuf);
+ 
+ int vb2_dqbuf(struct vb2_queue *q, struct v4l2_buffer *b, bool nonblocking)
+ {
++	printk("this should be called for dequeue\n");
+ 	int ret;
+ 
+ 	if (vb2_fileio_is_active(q)) {
++		printk("In the vb2_dqbuf file io is active\n");
+ 		dprintk(1, "file io in progress\n");
+ 		return -EBUSY;
+ 	}
+@@ -587,20 +592,22 @@ int vb2_dqbuf(struct vb2_queue *q, struct v4l2_buffer *b, bool nonblocking)
+ 	}
+ 
+ 	ret = vb2_core_dqbuf(q, NULL, b, nonblocking);
+-
++	printk("return value of the vb2_core_dqbuf = %d\n",ret);
+ 	/*
+ 	 *  After calling the VIDIOC_DQBUF V4L2_BUF_FLAG_DONE must be
+ 	 *  cleared.
+ 	 */
+ 	b->flags &= ~V4L2_BUF_FLAG_DONE;
+-
++	printk("vb2_qbuf is done and ret\n");
+ 	return ret;
+ }
+ EXPORT_SYMBOL_GPL(vb2_dqbuf);
+ 
+ int vb2_streamon(struct vb2_queue *q, enum v4l2_buf_type type)
+ {
++	printk("in the vb2_streamon\n");
+ 	if (vb2_fileio_is_active(q)) {
++		printk("In the vb2_streamon file io is active\n");
+ 		dprintk(1, "file io in progress\n");
+ 		return -EBUSY;
+ 	}
+@@ -610,7 +617,9 @@ EXPORT_SYMBOL_GPL(vb2_streamon);
+ 
+ int vb2_streamoff(struct vb2_queue *q, enum v4l2_buf_type type)
+ {
++	printk("In the vb2_streamoff\n");
+ 	if (vb2_fileio_is_active(q)) {
++		printk("In the vb2_streamoff file io is active\n");
+ 		dprintk(1, "file io in progress\n");
+ 		return -EBUSY;
+ 	}
+@@ -709,18 +718,21 @@ static inline bool vb2_queue_is_busy(struct video_device *vdev, struct file *fil
+ int vb2_ioctl_reqbufs(struct file *file, void *priv,
+ 			  struct v4l2_requestbuffers *p)
+ {
++	printk("reqbuf ioctl \n");
+ 	struct video_device *vdev = video_devdata(file);
+ 	int res = vb2_verify_memory_type(vdev->queue, p->memory, p->type);
+-
++	printk("memory type is %d\n",res);
+ 	if (res)
+ 		return res;
+ 	if (vb2_queue_is_busy(vdev, file))
+ 		return -EBUSY;
+ 	res = vb2_core_reqbufs(vdev->queue, p->memory, &p->count);
++	printk("vb2_core_reqbuf is done\n");	
+ 	/* If count == 0, then the owner has released all buffers and he
+ 	   is no longer owner of the queue. Otherwise we have a new owner. */
+ 	if (res == 0)
+ 		vdev->queue->owner = p->count ? file->private_data : NULL;
++	printk("reqbuf ioctl done\n");
+ 	return res;
+ }
+ EXPORT_SYMBOL_GPL(vb2_ioctl_reqbufs);
+@@ -949,6 +961,7 @@ EXPORT_SYMBOL_GPL(vb2_fop_get_unmapped_area);
+ 
+ void vb2_ops_wait_prepare(struct vb2_queue *vq)
+ {
++	//printk("min buf are %d\n",vq->min_buffers_needed);
+ 	mutex_unlock(vq->lock);
+ }
+ EXPORT_SYMBOL_GPL(vb2_ops_wait_prepare);
